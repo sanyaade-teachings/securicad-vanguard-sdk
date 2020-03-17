@@ -1,7 +1,7 @@
 # securiCAD Vanguard SDK
 > Automated threat modeling and attack simulations in your CI/CD pipeline
 
-A python SDK for [foreseeti's securiCAD Vanguard]([https://foreseeti.com/securicad-vanguard-for-aws/](https://foreseeti.com/securicad-vanguard-for-aws/)). Sign up for an account at [AWS Marketplace](https://aws.amazon.com/marketplace/pp/B08424ZMPS).
+A python SDK for [foreseeti's securiCAD Vanguard](https://foreseeti.com/securicad-vanguard-for-aws/). Sign up for an account at [AWS Marketplace](https://aws.amazon.com/marketplace/pp/B08424ZMPS).
 
 ## Getting started
 
@@ -18,8 +18,8 @@ pip install -r requirements.txt
 
 ### Get the required AWS credentials
 The securiCAD Vanguard SDK requires AWS credentials to be able to fetch data from AWS and run the simulations on your environment. The easiest way is to create an IAM User with the required permissions and generate access keys for that IAM User:
-* [Create an IAM user]([https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html)) with this [IAM policy]([https://vanguard.securicad.com/iam_policy.json](https://vanguard.securicad.com/iam_policy.json))
-* [Generate access keys]([https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html)) for the IAM user
+* [Create an IAM user](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html) with this [IAM policy](https://vanguard.securicad.com/iam_policy.json)
+* [Generate access keys](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html) for the IAM user
 
 Cross-account role access and local model generation will be available soon.
 
