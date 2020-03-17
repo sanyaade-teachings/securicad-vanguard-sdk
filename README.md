@@ -24,7 +24,7 @@ The securiCAD Vanguard SDK requires AWS credentials to be able to fetch data fro
 Cross-account role access and local model generation will be available soon.
 
 ### Run your first simulation
-The following snippet runs a simulation on an AWS environment where the high value asset is an EC2 instance with id `i-1a2b3c4d5e6f7`:
+The following snippet runs a simulation on an AWS environment where the high value asset is an EC2 instance with id `i-1a2b3c4d5e6f7` and prints the results. Please note, never store your credentials in source code, this is just an example.
 ```python
 import vanguard
 
@@ -32,7 +32,7 @@ import vanguard
 email = "your vanguard email"
 password = "your vanguard password"
 
-# AWS credentials for IAM user
+# AWS credentials for IAM user 
 access_key = "aws access key id"
 secret_key = "aws secret key"
 region = "your aws region" # e.g., us-east-1
@@ -47,11 +47,84 @@ model = client.get_model(access_key=access_key, secret_key=secret_key, region=re
 model.set_high_value_assets(instances=["i-1a2b3c4d5e6f7"])
 
 # Simulate and print the results
-results  =  client.simulate(model, profile=vanguard.Profile.CYBERCRIMINAL)
+results = client.simulate(model, profile=vanguard.Profile.CYBERCRIMINAL)
 print(results)
 
 ```
+The results will be returned as a `dict` with your high value asset identifiers as keys. For example:
+```json
+{
+    "buckets": {},
+    "dbinstances": {},
+    "instances": {
+        "i-1a2b3c4d5e6f7": {
+            "object_name": "web-server",
+            "probability": 0.5,
+            "ttc": 59
+        }
+    }
+}
+```
 Check out `example.py` for a more detailed example.
+
+## Examples
+Below are a few examples of how you can use `boto3` to automatically collect name or ids for your high value assets.
+
+### Get EC2 instance ids
+Get all EC2 instance ids where the instance is running and has the tag `owner` with value `erik`.
+
+```python
+import boto3
+
+session = boto3.Session()
+ec2 = session.resource('ec2')
+
+# List all running EC2 instances with the owner-tag erik
+instances = ec2.instances.filter(
+    Filters=[
+        {"Name": "tag:owner", "Values": ["erik"]},
+        {'Name': 'instance-state-name', 'Values': ['running']}
+    ]
+)
+# Get the instance-id of each filtered instance
+instance_ids = [instance.id for instance in instances]
+
+```
+
+### Get RDS instance identifiers
+Get all RDS instances and their identifiers.
+
+```python
+import boto3
+
+session = boto3.Session()
+rds = session.client('rds')
+
+# Get all RDS instance identifers with a paginator
+dbinstances = []
+paginator = rds.get_paginator('describe_db_instances').paginate()
+for page in paginator:
+    for db in page.get('DBInstances'):
+        dbinstances.append(db['DBInstanceIdentifier'])
+
+```
+
+### Get S3 buckets
+Get all S3 buckets where the bucket name contains the string `erik`.
+
+```python
+import boto3
+
+session = boto3.Session()
+s3 = session.resource('s3')
+
+# Get all s3 buckets where `erik` is in the bucket name
+buckets = []
+for bucket in s3.buckets.all():
+    if 'erik' in bucket.name:
+        buckets.append(bucket.name)
+
+```
 
 ## Links
 
