@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import urllib.request
 import re
 import sys
 import json
 import time
 import math
+import base64
+
+import requests
 
 from vanguard.model import Model
 
@@ -39,15 +41,18 @@ class Client:
         self.base_url = url
         self.backend_url = f"{self.base_url}/backend"
         self.token = self.authenticate(username, password, region)
+        self.headers = {"Authorization": self.token}
 
     def simulate(self, model, profile):
+        if not model.result_map:
+            raise ValueError("Model must have at least one high value asset")
         simulation_tag = self.simulate_model(model.model, profile.value)
         results = self.wait_for_results(simulation_tag)
         return self.parse_results(results, model)
 
     def get_model(self, **kwargs):
         if kwargs.get("data"):
-            model_tag = self.build_from_config(data)
+            model_tag = self.build_from_config(kwargs.get("data"))
         else:
             model_tag = self.build_from_role(
                 kwargs.get("access_key"), kwargs.get("secret_key"), kwargs.get("region")
@@ -75,54 +80,53 @@ class Client:
 
     def build_from_role(self, access_key, secret_key, region):
         url = f"{self.backend_url}/build_from_role"
-        data = json.dumps(
-            dict(
-                region=region,
-                access_key=access_key,
-                secret_key=secret_key,
-                include_inspector=False,
-            ),
-            separators=(",", ":"),
-        ).encode("utf-8")
-        req = urllib.request.Request(url, method="PUT", data=data)
-        req.add_header("Authorization", self.token)
-        with urllib.request.urlopen(req) as response:
-            data = json.loads(response.read())
-            mtag = data["response"]["mtag"]
-            return mtag
+        data = {
+            "region": region,
+            "access_key": access_key,
+            "secret_key": secret_key,
+            "include_inspector": False,
+        }
+        res = requests.put(url, headers=self.headers, json=data)
+        res.raise_for_status()
+        return res.json()["response"]["mtag"]
 
-    def build_from_config(self):
-        return
+    def build_from_config(self, json_data):
+        if isinstance(json_data, dict):
+            content = json.dumps(json_data).encode("utf-8")
+        elif isinstance(json_data, bytes):
+            content = json_data
+        else:
+            raise ValueError(
+                f"a bytes-like object or dict is required, not {type(json_data)}"
+            )
+        url = f"{self.backend_url}/build_from_config"
+        base64d = base64.b64encode(content).decode("utf-8")
+        data = {"files": [{"content": base64d, "filename": "apimodel.json"}]}
+        res = requests.put(url, headers=self.headers, json=data)
+        res.raise_for_status()
+        return res.json()["response"]["mtag"]
 
     def model_request(self, model_tag):
         url = f"{self.backend_url}/get_model"
-        data = json.dumps(dict(mtag=model_tag), separators=(",", ":")).encode("utf-8")
-        req = urllib.request.Request(url, method="POST", data=data)
-        req.add_header("Authorization", self.token)
-        with urllib.request.urlopen(req) as response:
-            return response.status, response.read()
+        data = {"mtag": model_tag}
+        res = requests.post(url, headers=self.headers, json=data)
+        res.raise_for_status()
+        return res.status_code, res.json()["response"]
 
     def simulate_model(self, model, profile):
         url = f"{self.backend_url}/simulate"
         model["name"] = "vanguard_model"
-        data = json.dumps(
-            dict(model=model, profile=profile, demo=False), separators=(",", ":")
-        ).encode("utf-8")
-        req = urllib.request.Request(url, method="PUT", data=data)
-        req.add_header("Authorization", self.token)
-        with urllib.request.urlopen(req) as response:
-            data = json.loads(response.read())["response"]
-            return data["tag"]
+        data = {"model": model, "profile": profile, "demo": False}
+        res = requests.put(url, headers=self.headers, json=data)
+        res.raise_for_status()
+        return res.json()["response"]["tag"]
 
     def get_results(self, simulation_tag):
         url = f"{self.backend_url}/results"
-        data = json.dumps(dict(tag=simulation_tag), separators=(",", ":")).encode(
-            "utf-8"
-        )
-        req = urllib.request.Request(url, method="POST", data=data)
-        req.add_header("Authorization", self.token)
-        with urllib.request.urlopen(req) as response:
-            return response.status, response.read()
+        data = {"tag": simulation_tag}
+        res = requests.post(url, headers=self.headers, json=data)
+        res.raise_for_status()
+        return res.status_code, res.json()["response"]
 
     def wait_for_results(self, simulation_tag):
         results = self.wait_for_response("get_results", simulation_tag)
@@ -156,7 +160,7 @@ class Client:
         result = {
             "probability": float(data["probability"]),
             "ttc": ttc50,
-            "object_name": data["object_name"]
+            "object_name": data["object_name"],
         }
         return result
 
@@ -166,13 +170,14 @@ class Client:
             time.sleep(5)
             status, data = getattr(self, function)(*args)
             if status == 200:
-                return json.loads(data)["response"]
+                return data
 
     def cognito_params(self, region):
         url = f"{self.base_url}/bundle.js"
         pattern = fr"{{\s*UserPoolId:\s*['\"]({region}[^'\"]+)['\"],\s*ClientId:\s*['\"]([^'\"]+)['\"]\s*}}"
-        with urllib.request.urlopen(url) as response:
-            data = response.read().decode("utf-8")
+        res = requests.get(url)
+        res.raise_for_status()
+        data = res.text
         match = re.search(pattern, data)
         if match:
             userpool_id = str(match.group(1))
