@@ -31,7 +31,7 @@ from securicad import vanguard
 email = "your vanguard email"
 password = "your vanguard password"
 
-# AWS credentials for IAM user 
+# AWS credentials for IAM user
 access_key = "aws access key id"
 secret_key = "aws secret key"
 region = "your aws region" # e.g., us-east-1
