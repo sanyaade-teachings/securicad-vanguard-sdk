@@ -20,9 +20,11 @@ import math
 import base64
 
 import requests
+from requests.exceptions import HTTPError
 
 import securicad.vanguard
 from securicad.vanguard.model import Model
+from securicad.vanguard.exceptions import VanguardCredentialsError, AwsCredentialsError
 
 import boto3
 import botocore
@@ -51,10 +53,8 @@ class Client:
         return parsed_results
 
     def get_model(self, **kwargs):
-        if kwargs.get("data"):
-            model_tag = self.build_from_config(
-                kwargs.get("data"), kwargs.get("vuln_data")
-            )
+        if "data" in kwargs and kwargs["data"] is not None:
+            model_tag = self.build_from_config(kwargs.get("data"), kwargs.get("vuln_data"))
         else:
             model_tag = self.build_from_role(
                 kwargs.get("access_key"),
@@ -62,14 +62,20 @@ class Client:
                 kwargs.get("region"),
                 kwargs.get("vuln_data"),
             )
-        model = self.wait_for_model(model_tag)
+        try:
+            model = self.wait_for_model(model_tag)
+
+        except HTTPError as e:
+            code = e.response.status_code
+            error_message = e.response.json().get("error")
+            if code == 400 and error_message == "Provided credentials were not accepted by AWS":
+                raise AwsCredentialsError(error_message)
+            raise e
         return Model(model)
 
     def authenticate(self, username, password, region):
         client = boto3.client(
-            "cognito-idp",
-            region_name=region,
-            config=Config(signature_version=botocore.UNSIGNED),
+            "cognito-idp", region_name=region, config=Config(signature_version=botocore.UNSIGNED),
         )
         client_id, pool_id = self.cognito_params(region)
         aws = AWSSRP(
@@ -79,9 +85,13 @@ class Client:
             client_id=client_id,
             client=client,
         )
-        access_token = aws.authenticate_user()["AuthenticationResult"]["AccessToken"]
-        jwt_token = f"JWT {access_token}"
-        return jwt_token
+        try:
+            access_token = aws.authenticate_user()["AuthenticationResult"]["AccessToken"]
+            jwt_token = f"JWT {access_token}"
+            return jwt_token
+        except:
+            error_message = "Invalid password or username"
+            raise VanguardCredentialsError(error_message)
 
     def encode_data(self, data):
         if isinstance(data, dict):
@@ -89,9 +99,7 @@ class Client:
         elif isinstance(data, bytes):
             content = data
         else:
-            raise ValueError(
-                f"a bytes-like object or dict is required, not {type(data)}"
-            )
+            raise ValueError(f"a bytes-like object or dict is required, not {type(data)}")
         return content
 
     def build_from_role(self, access_key, secret_key, region, vuln_data=None):

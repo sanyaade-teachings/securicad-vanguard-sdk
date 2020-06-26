@@ -14,6 +14,8 @@
 
 from collections import defaultdict
 
+from securicad.vanguard.exceptions import HighValueAssetError
+
 
 class Model:
     def __init__(self, model):
@@ -70,9 +72,8 @@ class Model:
 
         # Raise error if no high value asset matches were found
         if not self.result_map:
-            raise ValueError(
-                f"Failed to set any high value assets, couldn't find {hv_list}"
-            )
+            error_message = f"Failed to set any high value assets, couldn't find {hv_list}"
+            raise HighValueAssetError(error_message)
 
     def is_high_value_asset(self, obj, hv_asset):
         # Check if a model object matches any of the high value assets
@@ -93,10 +94,6 @@ class Model:
 
     def get_evidence(self, attackstep, evidence=10):
         evidence_list = [
-            {
-                "name": attackstep,
-                "distribution": "securiCAD default",
-                "consequence": evidence,
-            }
+            {"name": attackstep, "distribution": "securiCAD default", "consequence": evidence,}
         ]
         return evidence_list
