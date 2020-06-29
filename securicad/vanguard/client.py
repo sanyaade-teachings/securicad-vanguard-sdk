@@ -70,7 +70,13 @@ class Client:
             error_message = e.response.json().get("error")
             if code == 400 and error_message == "Provided credentials were not accepted by AWS":
                 raise AwsCredentialsError(error_message)
+
+            msg1 = "You don't have permission to perform the required action"
+            msg2 = "You don't have permission to perfom a required action"
+            if code == 400 and (error_message.startswith(msg1) or error_message.startswith(msg2)):
+                raise AwsCredentialsError(error_message)
             raise e
+
         return Model(model)
 
     def authenticate(self, username, password, region):
