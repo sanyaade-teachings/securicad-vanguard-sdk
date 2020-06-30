@@ -24,7 +24,11 @@ from requests.exceptions import HTTPError
 
 import securicad.vanguard
 from securicad.vanguard.model import Model
-from securicad.vanguard.exceptions import VanguardCredentialsError, AwsCredentialsError
+from securicad.vanguard.exceptions import (
+    VanguardCredentialsError,
+    AwsCredentialsError,
+    RateLimitError,
+)
 
 import boto3
 import botocore
@@ -36,11 +40,13 @@ class Client:
     def __init__(self, username, password, url, region="eu-central-1"):
         self.base_url = url
         self.backend_url = f"{self.base_url}/backend"
+
         self.token = self.authenticate(username, password, region)
         self.headers = {
             "User-Agent": f"Vanguard SDK {securicad.vanguard.__version__}",
             "Authorization": self.token,
         }
+        self.register()
 
     def simulate(self, model, profile, export_report=False):
         if not model.result_map:
@@ -98,6 +104,10 @@ class Client:
         except:
             error_message = "Invalid password or username"
             raise VanguardCredentialsError(error_message)
+
+    def register(self):
+        res = requests.get(url=f"{self.backend_url}/whoami", headers=self.headers)
+        res.raise_for_status()
 
     def encode_data(self, data):
         if isinstance(data, dict):
@@ -162,6 +172,10 @@ class Client:
         model["name"] = "vanguard_model"
         data = {"model": model, "profile": profile, "demo": False}
         res = requests.put(url, headers=self.headers, json=data)
+        if res.status_code == 429:
+            raise RateLimitError(
+                "You are currently ratelimited, please wait for other simulations to complete"
+            )
         res.raise_for_status()
         return res.json()["response"]["tag"]
 

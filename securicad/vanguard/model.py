@@ -92,8 +92,13 @@ class Model:
         self.model["objects"][oid]["attacksteps"] = self.get_evidence(attackstep)
         self.result_map[f"{obj['eid']}.{attackstep}"] = hv_asset
 
-    def get_evidence(self, attackstep, evidence=10):
-        evidence_list = [
-            {"name": attackstep, "distribution": "securiCAD default", "consequence": evidence,}
+    def get_evidence(self, attackstep, evidence=10, lowercost=0, uppercost=0):
+        return [
+            {
+                "name": attackstep,
+                "distribution": "securiCAD default",
+                "consequence": evidence,
+                "lowercost": lowercost,
+                "uppercost": uppercost,
+            }
         ]
-        return evidence_list
