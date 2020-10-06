@@ -4,8 +4,8 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements.txt requirements.in
 #
-boto3==1.15.11            # via -r requirements.in, pycognito
-botocore==1.18.11         # via -r requirements.in, boto3, s3transfer
+boto3==1.15.12            # via -r requirements.in, pycognito
+botocore==1.18.12         # via -r requirements.in, boto3, s3transfer
 certifi==2020.6.20        # via requests
 cffi==1.14.3              # via cryptography
 chardet==3.0.4            # via requests
