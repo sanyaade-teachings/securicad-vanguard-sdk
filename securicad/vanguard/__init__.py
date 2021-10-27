@@ -17,7 +17,7 @@ from enum import Enum
 
 from securicad.vanguard.client import Client
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 
 class Profile(Enum):
