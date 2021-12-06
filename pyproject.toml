@@ -3,24 +3,38 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.isort]
-profile = "black"
 py_version = "38"
+virtual_env = "venv"
+profile = "black"
 
 [tool.black]
 target-version = ["py38"]
 
+[tool.pyright]
+venvPath = "."
+venv = "venv"
+pythonVersion = "3.8"
+typeCheckingMode = "strict"
+reportImportCycles = false
+reportPrivateUsage = false
+
 [tool.mypy]
 python_version = "3.8"
+pretty = true
+strict = true
+
+[tool.pylint.master]
+py-version = "3.8"
+jobs = 0
 
 [tool.pylint.messages_control]
-# C0330, C0326: https://black.readthedocs.io/en/stable/guides/using_black_with_other_tools.html#pylint
-# C0114: missing-module-docstring
-# C0115: missing-class-docstring
-# C0116: missing-function-docstring
-# C0301: line-too-long
-# R0913: too-many-arguments
-disable = "C0330, C0326, C0114, C0115, C0116, C0301, R0913"
+disable = [
+  "C0114", # missing-module-docstring
+  "C0115", # missing-class-docstring
+  "C0116", # missing-function-docstring
+  "C0414", # useless-import-alias
+  "W0212", # protected-access
+]
 
 [tool.pylint.format]
-max-line-length = "88"
-good-names = "e"
+max-line-length = 88

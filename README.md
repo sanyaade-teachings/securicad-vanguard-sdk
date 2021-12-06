@@ -27,8 +27,6 @@ The easiest way is to create an IAM User with the required permissions and gener
 * [Create an IAM user](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html) with this [IAM policy](https://raw.githubusercontent.com/foreseeti/securicad-aws-collector/master/iam_policy.json)
 * [Generate access keys](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html) for the IAM user
 
-Cross-account role access and local model generation will be available soon.
-
 ### Run your first simulation
 
 The following snippet runs a simulation on an AWS environment where the high value asset is an EC2 instance with id `i-1a2b3c4d5e6f7` and prints the results.
@@ -174,28 +172,21 @@ The expected `vuln_data` format is explained below.
 
 securiCAD Vanguard supports any type of vulnerability data by using a generic json format.
 The json file should be a list of `findings` that describes each finding from e.g., a vulnerability scanner.
-All fields are mandatory and validated, but some can be left empty.
 See the example below for a practical example of a finding of `CVE-2018-11776` on a specific EC2 instance.
-`"cve"`, `"cvss"` and `"id"` (instance-id) are always mandatory.
 If the application is not listening on any port, you can set `"port"` to `0`.
 
 ```json
 {
   "findings": [
     {
-      "id": "i-1a2b3c4d5e6f7",
-      "ip": "",
-      "dns": "",
+      "host_id": "i-1a2b3c4d5e6f7",
       "application": "Apache Struts 2.5.16",
       "port": 80,
       "name": "CVE-2018-11776",
       "description": "Apache Struts versions 2.3 to 2.3.34 and 2.5 to 2.5.16 suffer from possible Remote Code Execution when alwaysSelectFullNamespace is true",
       "cve": "CVE-2018-11776",
-      "cwe": "",
       "cvss": [
         {
-          "version": "3.0",
-          "score": 8.1,
           "vector": "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
         }
       ]
@@ -210,8 +201,6 @@ securiCAD Vanguard uses the [CVSS vector](https://www.first.org/cvss/v3.1/specif
 For example, a CVE with `AV:L` is only exploitabe with local access and not via network access.
 `AC:H` will require more effort from the attacker compared to `AC:L` and `PR:H` will require the attacker to have high privilege access before being able to exploit the vulnerability in the simulation.
 The impact of the vulnerability is decided based on the `C/I/A` part of the vector.
-
-`CVSS:2.0` vectors are automatically converted to `CVSS:3` by the tool and if multiple versions are available, the tool will always select the latest one.
 
 ## Examples
 

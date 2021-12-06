@@ -4,13 +4,15 @@
 #
 #    ./tools/scripts/create_requirements.sh
 #
+attrs==21.2.0
+    # via jsonschema
 beautifulsoup4==4.10.0
     # via securicad-vanguard (setup.cfg)
-boto3==1.19.4
+boto3==1.20.16
     # via
     #   pycognito
     #   securicad-vanguard (setup.cfg)
-botocore==1.22.4
+botocore==1.23.16
     # via
     #   boto3
     #   s3transfer
@@ -19,28 +21,42 @@ certifi==2021.10.8
     # via requests
 cffi==1.15.0
     # via cryptography
-charset-normalizer==2.0.7
+charset-normalizer==2.0.8
     # via requests
-cryptography==35.0.0
+cryptography==36.0.0
     # via python-jose
 ecdsa==0.17.0
     # via python-jose
 envs==1.3
     # via pycognito
+future-fstrings==1.2.0
+    # via pyecore
 idna==3.3
     # via requests
+importlib-resources==5.4.0
+    # via jsonschema
 jmespath==0.10.0
     # via
     #   boto3
     #   botocore
+jsonschema==4.2.1
+    # via securicad-model
+lxml==4.6.4
+    # via pyecore
+ordered-set==4.0.2
+    # via pyecore
 pyasn1==0.4.8
     # via
     #   python-jose
     #   rsa
-pycognito==2021.3.1
+pycognito==2021.11.0
     # via securicad-vanguard (setup.cfg)
-pycparser==2.20
+pycparser==2.21
     # via cffi
+pyecore==0.12.2
+    # via securicad-model
+pyrsistent==0.18.0
+    # via jsonschema
 python-dateutil==2.8.2
     # via botocore
 python-jose[cryptography]==3.3.0
@@ -49,19 +65,23 @@ requests==2.26.0
     # via
     #   pycognito
     #   securicad-vanguard (setup.cfg)
-rsa==4.7.2
+restrictedpython==5.2
+    # via pyecore
+rsa==4.8
     # via python-jose
 s3transfer==0.5.0
     # via boto3
-securicad-model==0.0.2
+securicad-model==1.0.0
     # via securicad-vanguard (setup.cfg)
 six==1.16.0
     # via
     #   ecdsa
     #   python-dateutil
-soupsieve==2.2.1
+soupsieve==2.3.1
     # via beautifulsoup4
 urllib3==1.26.7
     # via
     #   botocore
     #   requests
+zipp==3.6.0
+    # via importlib-resources

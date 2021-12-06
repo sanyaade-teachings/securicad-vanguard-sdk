@@ -12,13 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import base64
 import json
 import math
 import re
 import sys
 import time
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from collections import defaultdict
+from enum import Enum
+from typing import Any, Optional
 from urllib.parse import urljoin
 
 import boto3
@@ -27,8 +31,9 @@ import requests
 from botocore.config import Config
 from bs4 import BeautifulSoup
 from bs4.element import Tag
+from mypy_boto3_cognito_idp.type_defs import RespondToAuthChallengeResponseTypeDef
 from pycognito.aws_srp import AWSSRP  # type: ignore
-from securicad.model import Model
+from securicad.model import Model, Object, es_serializer
 
 from securicad.vanguard.exceptions import (
     AwsCredentialsError,
@@ -38,8 +43,11 @@ from securicad.vanguard.exceptions import (
     VanguardCredentialsError,
 )
 
-if TYPE_CHECKING:
-    from securicad.vanguard import Profile
+
+class Profile(Enum):
+    STATESPONSORED = "State-sponsored"
+    CYBERCRIMINAL = "Cybercriminal"
+    OPPORTUNIST = "Opportunist"
 
 
 class Client:
@@ -60,7 +68,7 @@ class Client:
         self._backend_url = urljoin(url, "/backend/")
 
     def __init_session(self) -> None:
-        def get_user_agent():
+        def get_user_agent() -> str:
             # pylint: disable=import-outside-toplevel
             import securicad.vanguard
 
@@ -106,7 +114,7 @@ class Client:
         self._get("whoami")
 
     def __authenticate(self, username: str, password: str, region: str) -> str:
-        def get_cognito_params() -> Tuple[str, str]:
+        def get_cognito_params() -> tuple[str, str]:
             bundle = get_bundle()
             pattern = re.compile(
                 fr"{{\s*UserPoolId:\s*['\"]({region}[^'\"]+)['\"],\s*ClientId:\s*['\"]([^'\"]+)['\"]\s*}}"
@@ -159,22 +167,20 @@ class Client:
             client=client,
         )
         try:
-            access_token = aws.authenticate_user()["AuthenticationResult"][
-                "AccessToken"
-            ]
-        except:
-            raise VanguardCredentialsError("Invalid password or username")
-        return access_token
+            tokens: RespondToAuthChallengeResponseTypeDef = aws.authenticate_user()
+            return tokens["AuthenticationResult"]["AccessToken"]
+        except Exception as ex:
+            raise VanguardCredentialsError("Invalid password or username") from ex
 
     def get_model(
         self,
         *,
-        data: Optional[Dict[str, Any]] = None,
+        data: Optional[dict[str, Any]] = None,
         access_key: Optional[str] = None,
         secret_key: Optional[str] = None,
         region: Optional[str] = None,
         include_inspector: bool = False,
-        vuln_data: Optional[Dict[str, Any]] = None,
+        vuln_data: Optional[dict[str, Any]] = None,
     ) -> Model:
         try:
             if data is not None:
@@ -189,42 +195,54 @@ class Client:
                 raise ValueError(
                     "Either data or access_key, secret_key, and region must be specified"
                 )
-        except StatusCodeException as e:
-            if e.status_code == 429:
+        except StatusCodeException as ex:
+            if ex.status_code == 429:
                 raise RateLimitError(
                     "You are currently ratelimited, please wait for other models to complete"
-                )
+                ) from ex
             raise
 
         try:
             model = self.__wait_for_model(model_tag)
-        except StatusCodeException as e:
-            if e.status_code == 400:
-                self.__raise_model_error(e)
+        except StatusCodeException as ex:
+            if ex.status_code == 400 and ex.json is not None:
+                error_message = ex.json["error"]
+
+                # Credentials error
+                credentials_error = "No valid AWS credentials found"
+                if error_message == credentials_error:
+                    raise AwsCredentialsError(error_message) from ex
+
+                # Region error
+                region_error = "No valid AWS Region found"
+                if error_message == region_error:
+                    raise AwsRegionError(error_message) from ex
+
             raise
 
-        return Model(model)
+        return es_serializer.deserialize_model(model)
 
     def __build_from_config(
-        self, aws_data: Dict[str, Any], vuln_data: Optional[Dict[str, Any]]
+        self, aws_data: dict[str, Any], vuln_data: Optional[dict[str, Any]]
     ) -> str:
-        def get_file_content(dict_file: Dict[str, Any]) -> str:
+        def get_file_content(dict_file: dict[str, Any]) -> str:
             file_str = json.dumps(dict_file, allow_nan=False, indent=2)
             file_bytes = file_str.encode("utf-8")
             file_base64 = base64.b64encode(file_bytes).decode("utf-8")
             return file_base64
 
-        def get_file(name: str, dict_file: Dict[str, Any]) -> Dict[str, Any]:
+        def get_file(name: str, dict_file: dict[str, Any]) -> dict[str, Any]:
             return {
                 "filename": name,
                 "content": get_file_content(dict_file),
             }
 
-        data: Dict[str, Any] = {"files": [get_file("apimodel.json", aws_data)]}
+        data: dict[str, Any] = {"files": [get_file("apimodel.json", aws_data)]}
         if vuln_data is not None:
             data["additionalFiles"] = [get_file("vulnerabilities.json", vuln_data)]
         response = self._put("build_from_config", data, 202)
-        return response["mtag"]
+        model_tag: str = response["mtag"]
+        return model_tag
 
     def __build_from_role(
         self,
@@ -232,21 +250,21 @@ class Client:
         secret_key: str,
         region: str,
         include_inspector: bool,
-        vuln_data: Optional[Dict[str, Any]],
+        vuln_data: Optional[dict[str, Any]],
     ) -> str:
-        def get_file_content(dict_file: Dict[str, Any]) -> str:
+        def get_file_content(dict_file: dict[str, Any]) -> str:
             file_str = json.dumps(dict_file, allow_nan=False, indent=2)
             file_bytes = file_str.encode("utf-8")
             file_base64 = base64.b64encode(file_bytes).decode("utf-8")
             return file_base64
 
-        def get_file(name: str, dict_file: Dict[str, Any]) -> Dict[str, Any]:
+        def get_file(name: str, dict_file: dict[str, Any]) -> dict[str, Any]:
             return {
                 "filename": name,
                 "content": get_file_content(dict_file),
             }
 
-        data: Dict[str, Any] = {
+        data: dict[str, Any] = {
             "access_key": access_key,
             "secret_key": secret_key,
             "region": region,
@@ -255,109 +273,145 @@ class Client:
         if vuln_data is not None:
             data["additionalFiles"] = [get_file("vulnerabilities.json", vuln_data)]
         response = self._put("build_from_role", data, 202)
-        return response["mtag"]
+        model_tag: str = response["mtag"]
+        return model_tag
 
-    def __wait_for_model(self, model_tag: str) -> Dict[str, Any]:
+    def __wait_for_model(self, model_tag: str) -> dict[str, Any]:
         while True:
             try:
-                return self._post("get_model", {"mtag": model_tag})
-            except StatusCodeException as e:
-                if e.status_code != 204:
+                response: dict[str, Any] = self._post("get_model", {"mtag": model_tag})
+                return response
+            except StatusCodeException as ex:
+                if ex.status_code != 204:
                     raise
                 time.sleep(5)
 
-    def __raise_model_error(self, e: StatusCodeException) -> None:
-        error_message = e.json["error"]
-
-        # Credentials error
-        credentials_error = "No valid AWS credentials found"
-        if error_message == credentials_error:
-            raise AwsCredentialsError(error_message)
-
-        # Region error
-        region_error = "No valid AWS Region found"
-        if error_message == region_error:
-            raise AwsRegionError(error_message)
-
-        # pylint: disable=misplaced-bare-raise
-        raise
-
+    @staticmethod
     def set_high_value_assets(
-        self,
         model: Model,
-        instances: Optional[List[str]] = None,
-        dbinstances: Optional[List[str]] = None,
-        buckets: Optional[List[str]] = None,
-        dynamodb_tables: Optional[List[str]] = None,
-        high_value_assets: Optional[List[Dict[str, Any]]] = None,
+        instances: Optional[list[str]] = None,
+        dbinstances: Optional[list[str]] = None,
+        buckets: Optional[list[str]] = None,
+        dynamodb_tables: Optional[list[str]] = None,
+        high_value_assets: Optional[list[dict[str, Any]]] = None,
     ) -> None:
-        hva_list: List[Dict[str, Any]] = []
+        def get_hva_list() -> list[dict[str, Any]]:
+            def create_hva_tag(
+                metaconcept: str, attackstep: str, key: str, value: str
+            ) -> dict[str, Any]:
+                return {
+                    "metaconcept": metaconcept,
+                    "attackstep": attackstep,
+                    "id": {
+                        "type": "tag",
+                        "key": key,
+                        "value": value,
+                    },
+                }
 
-        if instances is not None:
-            for identifier in instances:
-                hva_list.append(
-                    {
-                        "metaconcept": "EC2Instance",
-                        "attackstep": "HighPrivilegeAccess",
-                        "id": {
-                            "type": "tag",
-                            "key": "aws-id",
-                            "value": identifier,
-                        },
-                    }
-                )
+            def create_hva_name(
+                metaconcept: str, attackstep: str, name: str
+            ) -> dict[str, Any]:
+                return {
+                    "metaconcept": metaconcept,
+                    "attackstep": attackstep,
+                    "id": {
+                        "type": "name",
+                        "value": name,
+                    },
+                }
 
-        if dbinstances is not None:
-            for identifier in dbinstances:
-                hva_list.append(
-                    {
-                        "metaconcept": "DBInstance",
-                        "attackstep": "ReadDatabase",
-                        "id": {
-                            "type": "name",
-                            "value": identifier,
-                        },
-                    }
-                )
+            hva_list: list[dict[str, Any]] = []
 
-        if buckets is not None:
-            for identifier in buckets:
-                hva_list.append(
-                    {
-                        "metaconcept": "S3Bucket",
-                        "attackstep": "ReadObject",
-                        "id": {
-                            "type": "name",
-                            "value": identifier,
-                        },
-                    }
-                )
+            if instances:
+                for identifier in instances:
+                    hva_list.append(
+                        create_hva_tag(
+                            metaconcept="EC2Instance",
+                            attackstep="HighPrivilegeAccess",
+                            key="aws-id",
+                            value=identifier,
+                        )
+                    )
 
-        if dynamodb_tables is not None:
-            for identifier in dynamodb_tables:
-                hva_list.append(
-                    {
-                        "metaconcept": "DynamoDBTable",
-                        "attackstep": "AuthenticatedRead",
-                        "id": {
-                            "type": "name",
-                            "value": identifier,
-                        },
-                    }
-                )
+            if dbinstances:
+                for identifier in dbinstances:
+                    hva_list.append(
+                        create_hva_name(
+                            metaconcept="DBInstance",
+                            attackstep="ReadDatabase",
+                            name=identifier,
+                        )
+                    )
 
-        if high_value_assets is not None:
-            hva_list.extend(high_value_assets)
+            if buckets:
+                for identifier in buckets:
+                    hva_list.append(
+                        create_hva_name(
+                            metaconcept="S3Bucket",
+                            attackstep="ReadObject",
+                            name=identifier,
+                        )
+                    )
 
-        model.set_high_value_assets(high_value_assets=hva_list)
+            if dynamodb_tables:
+                for identifier in dynamodb_tables:
+                    hva_list.append(
+                        create_hva_name(
+                            metaconcept="DynamoDBTable",
+                            attackstep="AuthenticatedRead",
+                            name=identifier,
+                        )
+                    )
+
+            if high_value_assets:
+                hva_list.extend(high_value_assets)
+
+            return hva_list
+
+        def is_hva(obj: Object, hv_asset: dict[str, Any]) -> bool:
+            # Check if a model object matches any of the high value assets
+            if not hv_asset.get("id"):
+                return True
+            if hv_asset["id"]["type"] == "name":
+                name: str = hv_asset["id"]["value"]
+                return obj.name == name
+            if hv_asset["id"]["type"] == "tag":
+                key: str = hv_asset["id"]["key"]
+                value: str = hv_asset["id"]["value"]
+                tag = obj.meta["tags"].get(key)
+                return isinstance(tag, str) and tag == value
+            return False
+
+        hva_list = get_hva_list()
+
+        # Collect the high value assets under their metaconcept
+        hv_assets: defaultdict[str, list[dict[str, Any]]] = defaultdict(list)
+        for hv_asset in hva_list:
+            hv_assets[hv_asset["metaconcept"]].append(hv_asset)
+
+        # Check if any of the objects are eligible as a high value asset
+        for obj in model.objects():
+            if obj.asset_type not in hv_assets:
+                continue
+            for hv_asset in hv_assets[obj.asset_type]:
+                if not is_hva(obj, hv_asset):
+                    continue
+                if hv_asset.get("consequence") is not None:
+                    consequence: int = hv_asset["consequence"]
+                else:
+                    consequence = 10
+                attackstep = obj.attack_step(hv_asset["attackstep"])
+                attackstep.meta["consequence"] = consequence
 
     def simulate(
-        self, model: Model, profile: "Profile", export_report: bool = False
-    ) -> Dict[str, Any]:
+        self, model: Model, profile: Profile, export_report: bool = False
+    ) -> dict[str, Any]:
         def has_high_value_asset(model: Model) -> bool:
-            for obj in model.model["objects"].values():
-                for step in obj["attacksteps"]:
-                    if step["consequence"]:
+            for obj in model.objects():
+                for step in obj._attack_steps.values():
+                    meta: dict[str, Any] = step.meta
+                    if meta.get("consequence", 0):
                         return True
             return False
 
@@ -365,12 +419,14 @@ class Client:
             raise ValueError("Model must have at least one high value asset")
 
         try:
-            simulation_tag = self.__simulate_model(model.model, profile.value)
-        except StatusCodeException as e:
-            if e.status_code == 429:
+            simulation_tag = self.__simulate_model(
+                es_serializer.serialize_model(model), profile.value
+            )
+        except StatusCodeException as ex:
+            if ex.status_code == 429:
                 raise RateLimitError(
                     "You are currently ratelimited, please wait for other simulations to complete"
-                )
+                ) from ex
             raise
 
         results = self.__wait_for_results(simulation_tag)
@@ -379,23 +435,28 @@ class Client:
             parsed_results["Report"] = results
         return parsed_results
 
-    def __simulate_model(self, model: Dict[str, Any], profile: str) -> str:
+    def __simulate_model(self, model: dict[str, Any], profile: str) -> str:
         model["name"] = "vanguard_model"
         data = {"model": model, "profile": profile, "demo": False}
         response = self._put("simulate", data)
-        return response["tag"]
+        simulation_tag: str = response["tag"]
+        return simulation_tag
 
-    def __wait_for_results(self, simulation_tag: str) -> Dict[str, Any]:
+    def __wait_for_results(self, simulation_tag: str) -> dict[str, Any]:
         while True:
             try:
-                return self._post("results", {"tag": simulation_tag})
-            except StatusCodeException as e:
-                if e.status_code != 204:
+                response: dict[str, Any] = self._post(
+                    "results", {"tag": simulation_tag}
+                )
+                return response
+            except StatusCodeException as ex:
+                if ex.status_code != 204:
                     raise
                 time.sleep(5)
 
-    def __parse_results(self, results: Dict[str, Any]) -> Dict[str, Any]:
-        def get_key(data: Dict[str, Any]) -> str:
+    @staticmethod
+    def __parse_results(results: dict[str, Any]) -> dict[str, Any]:
+        def get_key(data: dict[str, Any]) -> str:
             object_id = int(data["object_id"])
             for obj in model["objects"].values():
                 if obj["eid"] == object_id:
@@ -409,7 +470,7 @@ class Client:
             return str(object_id)
 
         model = results["model_data"]
-        parsed_results: Dict[str, Any] = {}
+        parsed_results: dict[str, Any] = {}
         for data in results["results"]["data"].values():
             metaconcept = data["metaconcept"]
             attackstep = data["attackstep"]
