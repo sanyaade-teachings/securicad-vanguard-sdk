@@ -22,7 +22,7 @@ import sys
 import time
 from collections import defaultdict
 from enum import Enum
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 from urllib.parse import urljoin
 
 import boto3
@@ -31,7 +31,6 @@ import requests
 from botocore.config import Config
 from bs4 import BeautifulSoup
 from bs4.element import Tag
-from mypy_boto3_cognito_idp.type_defs import RespondToAuthChallengeResponseTypeDef
 from pycognito.aws_srp import AWSSRP  # type: ignore
 from securicad.model import Model, Object, es_serializer
 
@@ -42,6 +41,9 @@ from securicad.vanguard.exceptions import (
     StatusCodeException,
     VanguardCredentialsError,
 )
+
+if TYPE_CHECKING:
+    from mypy_boto3_cognito_idp.type_defs import RespondToAuthChallengeResponseTypeDef
 
 
 class Profile(Enum):
