@@ -169,29 +169,31 @@ model = client.get_model(
 The expected `vuln_data` format is explained below.
 
 ### Vulnerability data format
+securiCAD Vanguard supports any type of vulnerability data by using a generic json format. The json file should be a list of `findings` that describes each finding from e.g., a vulnerability scanner.
 
-securiCAD Vanguard supports any type of vulnerability data by using a generic json format.
-The json file should be a list of `findings` that describes each finding from e.g., a vulnerability scanner.
-See the example below for a practical example of a finding of `CVE-2018-11776` on a specific EC2 instance.
-If the application is not listening on any port, you can set `"port"` to `0`.
+The mandatory fields are `"application"`, `"port"`, `"cvss"` and one of the host identifiers `"host_id"`, `"host_ip"`, `"image_id"`, `"host_tags"`. The fields `"host_id"`, `"host_ip"` and `"image_id"` are strings and `"host_tags"` is a list of `{"key": <key>, "value": <value>}` objects that matches on host tags. `"name"`, `"description"`, `"cve"` and `"cwe"` are optional.
+
+See the example below for a practical example of a finding of `CVE-2018-11776` on a specific EC2 instance with instance id `"i-1a2b3c4d5e6f7"`. If the application is not listening on any port, you can set `"port"` to `0`. CVSS 2.0, 3.0 and 3.1 vectors are supported.
+
+The optional `"exploit"` parameter takes a string according to the [Exploitability (CVSS v2) or Exploit Code Maturity (CVSS v3) specification](https://www.first.org/cvss/specification-document) that will affect how much effort is required for the Attacker to exploit a vulnerability. For example: `"exploit": "H"`
 
 ```json
 {
-  "findings": [
-    {
-      "host_id": "i-1a2b3c4d5e6f7",
-      "application": "Apache Struts 2.5.16",
-      "port": 80,
-      "name": "CVE-2018-11776",
-      "description": "Apache Struts versions 2.3 to 2.3.34 and 2.5 to 2.5.16 suffer from possible Remote Code Execution when alwaysSelectFullNamespace is true",
-      "cve": "CVE-2018-11776",
-      "cvss": [
+    "findings": [
         {
-          "vector": "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+            "host_id": "i-1a2b3c4d5e6f7",
+            "application": "Apache Struts 2.5.16",
+            "port": 80,
+            "cve": "CVE-2018-11776",
+            "name": "CVE-2018-11776",
+            "description": "Apache Struts versions 2.3 to 2.3.34 and 2.5 to 2.5.16 suffer from possible Remote Code Execution when alwaysSelectFullNamespace is true",
+            "cvss": [
+                {
+                    "vector": "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+                }
+            ]
         }
-      ]
-    }
-  ]
+    ]
 }
 ```
 
