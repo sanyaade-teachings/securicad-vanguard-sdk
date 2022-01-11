@@ -4,9 +4,9 @@
 #
 #    ./tools/scripts/create_requirements.sh
 #
-astroid==2.9.0
+astroid==2.9.3
     # via pylint
-attrs==21.2.0
+attrs==21.4.0
     # via jsonschema
 beautifulsoup4==4.10.0
     # via securicad-vanguard (setup.cfg)
@@ -14,18 +14,18 @@ black==21.12b0
     # via securicad-vanguard (setup.cfg)
 bleach==4.1.0
     # via readme-renderer
-boto3==1.20.26
+boto3==1.20.31
     # via
     #   pycognito
     #   securicad-vanguard (setup.cfg)
-boto3-stubs[cognito-idp]==1.20.26
+boto3-stubs[cognito-idp]==1.20.31
     # via securicad-vanguard (setup.cfg)
-botocore==1.23.26
+botocore==1.23.31
     # via
     #   boto3
     #   s3transfer
     #   securicad-vanguard (setup.cfg)
-botocore-stubs==1.23.26
+botocore-stubs==1.23.31
     # via boto3-stubs
 build==0.7.0
     # via securicad-vanguard (setup.cfg)
@@ -33,7 +33,7 @@ certifi==2021.10.8
     # via requests
 cffi==1.15.0
     # via cryptography
-charset-normalizer==2.0.9
+charset-normalizer==2.0.10
     # via requests
 click==8.0.3
     # via black
@@ -71,9 +71,9 @@ jmespath==0.10.0
     # via
     #   boto3
     #   botocore
-jsonschema==4.3.2
+jsonschema==4.3.3
     # via securicad-model
-keyring==23.4.0
+keyring==23.5.0
     # via twine
 lazy-object-proxy==1.7.1
     # via astroid
@@ -81,7 +81,7 @@ lxml==4.7.1
     # via pyecore
 mccabe==0.6.1
     # via pylint
-mypy==0.930
+mypy==0.931
     # via securicad-vanguard (setup.cfg)
 mypy-boto3-cognito-idp==1.20.1
     # via boto3-stubs
@@ -109,13 +109,13 @@ pyasn1==0.4.8
     # via
     #   python-jose
     #   rsa
-pycognito==2021.12.0
+pycognito==2022.1.0
     # via securicad-vanguard (setup.cfg)
 pycparser==2.21
     # via cffi
 pyecore==0.12.2
     # via securicad-model
-pygments==2.10.0
+pygments==2.11.2
     # via readme-renderer
 pylint==2.12.2
     # via securicad-vanguard (setup.cfg)
@@ -129,7 +129,7 @@ python-jose[cryptography]==3.3.0
     # via pycognito
 readme-renderer==32.0
     # via twine
-requests==2.26.0
+requests==2.27.1
     # via
     #   pycognito
     #   requests-toolbelt
@@ -139,7 +139,7 @@ requests-toolbelt==0.9.1
     # via twine
 restrictedpython==5.2
     # via pyecore
-rfc3986==1.5.0
+rfc3986==2.0.0
     # via twine
 rsa==4.8
     # via python-jose
@@ -168,10 +168,12 @@ tqdm==4.62.3
     # via twine
 twine==3.7.1
     # via securicad-vanguard (setup.cfg)
-types-beautifulsoup4==4.10.6
+types-beautifulsoup4==4.10.10
     # via securicad-vanguard (setup.cfg)
-types-requests==2.26.2
+types-requests==2.27.5
     # via securicad-vanguard (setup.cfg)
+types-urllib3==1.26.2
+    # via types-requests
 typing-extensions==4.0.1
     # via
     #   astroid
@@ -181,7 +183,7 @@ typing-extensions==4.0.1
     #   mypy
     #   mypy-boto3-cognito-idp
     #   pylint
-urllib3==1.26.7
+urllib3==1.26.8
     # via
     #   botocore
     #   requests
@@ -189,7 +191,7 @@ webencodings==0.5.1
     # via bleach
 wrapt==1.13.3
     # via astroid
-zipp==3.6.0
+zipp==3.7.0
     # via
     #   importlib-metadata
     #   importlib-resources

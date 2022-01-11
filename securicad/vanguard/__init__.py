@@ -19,7 +19,7 @@ from typing import Any
 from securicad.vanguard.client import Client
 from securicad.vanguard.client import Profile as Profile
 
-__version__ = "0.1.2"
+__version__ = "1.0.0"
 
 
 def client(*args: Any, **kwargs: Any) -> Client:
