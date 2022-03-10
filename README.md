@@ -3,13 +3,8 @@
 > Automated threat modeling and attack simulations in your CI/CD pipeline
 
 A Python SDK for [foreseeti's securiCAD Vanguard](https://foreseeti.com/securicad-vanguard-for-aws/).
-Sign up for an account at [AWS Marketplace](https://aws.amazon.com/marketplace/pp/B08424ZMPS).
 
 ## Getting started
-
-### Sign up for a securiCAD Vanguard account
-
-Go to [AWS Marketplace](https://aws.amazon.com/marketplace/pp/B08424ZMPS) and sign up to securiCAD Vanguard and verify your account.
 
 ### Download and setup the SDK
 
@@ -269,7 +264,6 @@ for bucket in s3.buckets.all():
 Additional information can be found at:
 
 - About [foreseeti](https://foreseeti.com/)
-- securiCAD Vanguard on [AWS Marketplace](https://aws.amazon.com/marketplace/pp/foreseeti-securiCAD-Vanguard/B08424ZMPS)
 - Related projects:
   - [https://mal-lang.org/](https://mal-lang.org/)
 
